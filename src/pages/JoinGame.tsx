@@ -92,7 +92,7 @@ export function JoinGame() {
         <h1 className="text-xl font-bold text-white">Join Game</h1>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-safe-bottom pb-8 pb-20 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-sm mx-auto w-full" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         <form onSubmit={handleJoin} className="flex flex-col gap-6 w-full">
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold uppercase tracking-widest text-text-muted">

@@ -120,7 +120,7 @@ export function CreateGame() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleCreate} className="flex-1 flex flex-col px-4 pb-8 pb-safe-bottom pb-20 gap-6 max-w-md mx-auto w-full">
+      <form onSubmit={handleCreate} className="flex-1 flex flex-col px-4 gap-6 max-w-md mx-auto w-full" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         <Section label="Starting Balance">
           <p className="text-xs text-text-muted mb-3">Chips each player starts with</p>
           <NumberInput
