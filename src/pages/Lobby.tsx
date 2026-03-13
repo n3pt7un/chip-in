@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
-import { onSnapshot, updateDoc, deleteField } from 'firebase/firestore'
+import { onSnapshot, updateDoc, deleteField, FieldPath } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 import { gameRef } from '../lib/firebase'
 import { PlayerList } from '../components/PlayerList'
+import { saveActiveGame, clearActiveGame } from '../lib/activeGame'
 import type { GameDoc } from '../types'
 
 export function Lobby() {
@@ -27,16 +28,24 @@ export function Lobby() {
       const data = snap.data() as GameDoc
       setGame(data)
 
+      if (data.status === 'lobby' || data.status === 'active') {
+        if (user) saveActiveGame(user.uid, gameCode)
+      }
+
       if (data.status === 'active') {
         navigate(`/game/${gameCode}`, { replace: true })
       }
+      if (data.status === 'paused') {
+        navigate(`/game/${gameCode}`, { replace: true })
+      }
       if (data.status === 'ended') {
+        if (user) clearActiveGame(user.uid)
         navigate('/', { replace: true })
       }
     })
 
     return unsub
-  }, [gameCode, navigate])
+  }, [gameCode, navigate, user])
 
   if (!user) {
     return <Navigate to="/" replace />
@@ -44,7 +53,7 @@ export function Lobby() {
 
   if (notFound) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[#0f1117]">
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-bg">
         <p className="text-white/60">Game not found.</p>
         <button onClick={() => navigate('/')} className="mt-4 text-accent">Go home</button>
       </div>
@@ -53,7 +62,7 @@ export function Lobby() {
 
   if (!game) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-[#0f1117]">
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -67,9 +76,11 @@ export function Lobby() {
 
   async function handleApprove(uid: string) {
     if (!gameCode) return
-    await updateDoc(gameRef(gameCode), {
-      [`players.${uid}.status`]: 'approved',
-    })
+    await updateDoc(
+      gameRef(gameCode),
+      new FieldPath('players', uid, 'status'),
+      'approved'
+    )
   }
 
   async function handleStart() {
@@ -81,9 +92,12 @@ export function Lobby() {
     if (!gameCode || !user || isHost) return
     setLeaving(true)
     try {
-      await updateDoc(gameRef(gameCode), {
-        [`players.${user.uid}`]: deleteField(),
-      })
+      await updateDoc(
+        gameRef(gameCode),
+        new FieldPath('players', user.uid),
+        deleteField()
+      )
+      clearActiveGame(user.uid)
       navigate('/')
     } catch {
       setLeaving(false)
@@ -99,13 +113,13 @@ export function Lobby() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#0f1117]">
+    <div className="min-h-dvh flex flex-col bg-bg">
       {/* Header */}
       <div className="flex items-center gap-4 px-4 pt-safe-top pt-4 pb-4">
         {!isHost && (
           <button
             onClick={() => navigate('/')}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface text-white/60 active:text-white transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface text-text-muted active:text-white transition-colors"
             aria-label="Go back"
           >
             ←
@@ -113,7 +127,7 @@ export function Lobby() {
         )}
         <div className="flex-1">
           <h1 className="text-xl font-bold text-white">Waiting Room</h1>
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-text-muted">
             {isHost ? 'Approve players and start when ready' : `Hosted by ${game.hostName}`}
           </p>
         </div>
@@ -121,8 +135,8 @@ export function Lobby() {
 
       <div className="flex-1 flex flex-col px-4 pb-8 gap-6 max-w-md mx-auto w-full overflow-y-auto">
         {/* Game code */}
-        <div className="bg-surface rounded-2xl border border-white/5 p-4 flex flex-col items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+        <div className="bg-surface rounded-2xl border border-surface-border py-8 px-4 flex flex-col items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">
             Share this code
           </p>
           <p className="text-4xl font-bold tracking-[0.4em] text-accent font-mono">
@@ -130,21 +144,21 @@ export function Lobby() {
           </p>
           <button
             onClick={copyCode}
-            className="text-xs text-white/40 active:text-accent transition-colors py-1 px-3 rounded-lg"
+            className="text-xs text-text-muted active:text-accent transition-colors py-1 px-3 rounded-lg"
           >
             {copied ? '✓ Copied' : 'Tap to copy'}
           </button>
         </div>
 
         {/* Game settings summary */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col">
           <Stat label="Starting Balance" value={game.startingBalance.toLocaleString()} />
           <Stat label="Min Bet" value={game.minBet.toLocaleString()} />
         </div>
 
         {/* Players */}
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-3">
             Players ({Object.keys(players).length})
           </h2>
           <PlayerList
@@ -174,7 +188,7 @@ export function Lobby() {
               >
                 {canStart ? 'Start Game' : `Need at least 2 approved players`}
               </button>
-              <p className="text-center text-xs text-white/30">
+              <p className="text-center text-xs text-text-muted">
                 {approvedCount} / {Object.keys(players).length} player{approvedCount !== 1 ? 's' : ''} approved
               </p>
             </>
@@ -182,7 +196,7 @@ export function Lobby() {
             <button
               onClick={handleLeave}
               disabled={leaving}
-              className="w-full py-3 rounded-2xl bg-surface text-white/60 font-semibold text-sm border border-white/10 active:bg-surface-2 transition-colors"
+              className="w-full py-3 rounded-2xl bg-surface text-text-muted font-semibold text-sm border border-surface-border active:bg-surface-2 transition-colors"
             >
               {leaving ? 'Leaving…' : 'Leave Game'}
             </button>
@@ -195,8 +209,8 @@ export function Lobby() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-surface rounded-xl border border-white/5 px-3 py-2.5 flex flex-col gap-0.5">
-      <p className="text-xs text-white/40">{label}</p>
+    <div className="border-b border-surface-border px-3 py-3 flex flex-col gap-0.5">
+      <p className="text-xs text-text-muted">{label}</p>
       <p className="text-lg font-semibold text-white">{value}</p>
     </div>
   )

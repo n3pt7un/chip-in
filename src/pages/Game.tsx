@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
-import { onSnapshot, runTransaction, updateDoc } from 'firebase/firestore'
+import { onSnapshot, runTransaction, updateDoc, setDoc, FieldPath, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
-import { db, gameRef } from '../lib/firebase'
+import { db, gameRef, gameHistoryRef } from '../lib/firebase'
 import { PotDisplay } from '../components/PotDisplay'
 import { PlayerList } from '../components/PlayerList'
 import { BetControl } from '../components/BetControl'
-import type { GameDoc } from '../types'
+import { saveActiveGame, clearActiveGame } from '../lib/activeGame'
+import type { GameDoc, GameHistoryEntry } from '../types'
 
 export function Game() {
   const { user } = useAuth()
@@ -19,6 +20,13 @@ export function Game() {
   const [takingPot, setTakingPot] = useState(false)
   const [endingGame, setEndingGame] = useState(false)
 
+  // Save active game on mount so we can rejoin if app is killed
+  useEffect(() => {
+    if (user && gameCode) {
+      saveActiveGame(user.uid, gameCode)
+    }
+  }, [user, gameCode])
+
   useEffect(() => {
     if (!gameCode) return
 
@@ -30,12 +38,37 @@ export function Game() {
       const data = snap.data() as GameDoc
       setGame(data)
       if (data.status === 'ended') {
+        // Clear active game tracking
+        if (user) {
+          clearActiveGame(user.uid)
+
+          // Write game history entry (fire-and-forget)
+          if (data.players[user.uid]) {
+            const entry: GameHistoryEntry = {
+              gameCode: gameCode,
+              endedAt: data.endedAt ?? Timestamp.now(),
+              hostName: data.hostName,
+              myFinalBalance: data.players[user.uid].balance,
+              myStartingBalance: data.startingBalance,
+              netChips: data.players[user.uid].balance - data.startingBalance,
+              players: Object.fromEntries(
+                Object.entries(data.players).map(([uid, p]) => [uid, {
+                  displayName: p.displayName,
+                  finalBalance: p.balance,
+                }])
+              ),
+              rounds: data.round,
+              ttl: Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            }
+            setDoc(gameHistoryRef(user.uid, gameCode), entry).catch(console.error)
+          }
+        }
         navigate('/', { replace: true })
       }
     })
 
     return unsub
-  }, [gameCode, navigate])
+  }, [gameCode, navigate, user])
 
   if (!user) {
     return <Navigate to="/" replace />
@@ -43,7 +76,7 @@ export function Game() {
 
   if (notFound) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[#0f1117]">
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-bg">
         <p className="text-white/60">Game not found.</p>
         <button onClick={() => navigate('/')} className="mt-4 text-accent">Go home</button>
       </div>
@@ -52,7 +85,7 @@ export function Game() {
 
   if (!game) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-[#0f1117]">
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -63,8 +96,8 @@ export function Game() {
 
   if (!myPlayer || myPlayer.status !== 'approved') {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-6 gap-4 bg-[#0f1117]">
-        <p className="text-white/60">You are not part of this game.</p>
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6 gap-4 bg-bg">
+        <p className="text-text-muted">You are not part of this game.</p>
         <button onClick={() => navigate('/')} className="text-accent">Go home</button>
       </div>
     )
@@ -80,11 +113,12 @@ export function Game() {
       if (!player) throw new Error('You are not in this game')
       if (player.balance < amount) throw new Error('Not enough chips')
 
-      t.update(gameRef(gameCode), {
-        pot: g.pot + amount,
-        [`players.${user.uid}.balance`]: player.balance - amount,
-        [`players.${user.uid}.currentBet`]: player.currentBet + amount,
-      })
+      t.update(
+        gameRef(gameCode),
+        'pot', g.pot + amount,
+        new FieldPath('players', user.uid, 'balance'), player.balance - amount,
+        new FieldPath('players', user.uid, 'currentBet'), player.currentBet + amount
+      )
     })
   }
 
@@ -122,22 +156,48 @@ export function Game() {
     if (!gameCode || !isHost) return
     setEndingGame(true)
     try {
-      await updateDoc(gameRef(gameCode), { status: 'ended' })
+      await updateDoc(gameRef(gameCode), { status: 'ended', endedAt: serverTimestamp() })
     } catch {
       setEndingGame(false)
+    }
+  }
+
+  const handlePauseGame = async () => {
+    try {
+      await updateDoc(gameRef(gameCode!), { status: 'paused' })
+    } catch (err) {
+      console.error('Failed to pause game:', err)
+    }
+  }
+
+  const handleResumeGame = async () => {
+    try {
+      await updateDoc(gameRef(gameCode!), { status: 'active' })
+    } catch (err) {
+      console.error('Failed to resume game:', err)
     }
   }
 
   const maxBet = myPlayer.balance
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#0f1117]">
+    <div className="min-h-dvh flex flex-col bg-bg">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-safe-top pt-3 pb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-mono font-bold text-white/30 tracking-wider">{gameCode}</span>
+          <span className="text-sm font-mono font-bold text-text-muted tracking-wider">{gameCode}</span>
         </div>
         <div className="flex items-center gap-2">
+          {isHost && game.status === 'active' && (
+            <button onClick={handlePauseGame} className="text-xs text-text-muted border border-surface-border px-3 py-1.5 rounded-lg cursor-pointer">
+              Pause
+            </button>
+          )}
+          {isHost && game.status === 'paused' && (
+            <button onClick={handleResumeGame} className="text-xs text-accent border border-accent/30 px-3 py-1.5 rounded-lg cursor-pointer">
+              Resume
+            </button>
+          )}
           {isHost && (
             <button
               onClick={handleEndGame}
@@ -161,11 +221,11 @@ export function Game() {
       <div className="flex-1 flex flex-col landscape:flex-row overflow-hidden">
 
         {/* Left / top panel: pot + players */}
-        <div className="flex flex-col landscape:flex-1 landscape:overflow-y-auto landscape:border-r landscape:border-white/5 px-4">
+        <div className="flex flex-col landscape:flex-1 landscape:overflow-y-auto landscape:border-r landscape:border-surface-border px-4">
           <PotDisplay pot={game.pot} round={game.round} />
 
           <div className="flex-1 overflow-y-auto pb-4">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3">Players</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-3">Players</h2>
             <PlayerList
               players={game.players}
               currentUserId={user.uid}
@@ -176,20 +236,20 @@ export function Game() {
         </div>
 
         {/* Right / bottom panel: bet control + take pot */}
-        <div className="flex-shrink-0 landscape:w-80 landscape:flex landscape:flex-col landscape:justify-center px-4 pb-safe-bottom pb-6 pt-2 landscape:pt-4 bg-[#0f1117]">
-          <div className="border-t border-white/5 landscape:border-t-0 pt-4 landscape:pt-0 flex flex-col gap-3">
+        <div className="flex-shrink-0 landscape:w-80 landscape:flex landscape:flex-col landscape:justify-center px-4 pb-safe-bottom pb-24 pt-2 landscape:pt-4 bg-bg">
+          <div className="pt-6 landscape:pt-0 flex flex-col gap-3">
             <BetControl
               minBet={game.minBet}
               presets={game.presets}
               maxBet={maxBet}
               onBet={handleBet}
-              disabled={maxBet <= 0}
+              disabled={maxBet <= 0 || game.status === 'paused'}
             />
 
             <button
               onClick={() => setShowTakePot(true)}
-              disabled={game.pot === 0}
-              className="w-full py-3.5 rounded-2xl bg-surface text-accent font-bold text-sm border border-accent/30 active:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+              disabled={game.pot === 0 || game.status === 'paused'}
+              className="w-full bg-accent/15 text-accent border border-accent/40 font-bold py-4 rounded-2xl text-sm active:bg-accent/25 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
             >
               Take Pot ({game.pot.toLocaleString()})
             </button>
@@ -197,13 +257,21 @@ export function Game() {
         </div>
       </div>
 
+      {/* Paused overlay for non-hosts */}
+      {game.status === 'paused' && !isHost && (
+        <div className="fixed inset-0 z-40 bg-bg/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+          <p className="text-lg font-bold">Game Paused</p>
+          <p className="text-sm text-text-muted">Waiting for host to resume</p>
+        </div>
+      )}
+
       {/* Take Pot confirmation modal */}
       {showTakePot && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4">
+          <div className="bg-surface border border-surface-border rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4">
             <div className="text-center">
               <p className="text-lg font-bold text-white">Take the Pot?</p>
-              <p className="text-sm text-white/50 mt-1">
+              <p className="text-sm text-text-muted mt-1">
                 You'll receive{' '}
                 <span className="text-accent font-semibold">{game.pot.toLocaleString()} chips</span>.
                 All bets will reset.
@@ -212,7 +280,7 @@ export function Game() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowTakePot(false)}
-                className="flex-1 py-3 rounded-xl bg-surface-2 text-white/70 font-semibold border border-white/10 active:bg-surface transition-colors"
+                className="flex-1 py-3 rounded-xl bg-surface-2 text-white/70 font-semibold border border-surface-border active:bg-surface transition-colors"
               >
                 Cancel
               </button>
