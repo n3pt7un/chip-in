@@ -5,6 +5,17 @@ import { useAuth } from '../contexts/AuthContext'
 import { db } from '../lib/firebase'
 import type { GameDoc } from '../types'
 
+const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const CODE_LENGTH = 5
+
+function generateCode(): string {
+  let code = ''
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    code += CHARSET[Math.floor(Math.random() * CHARSET.length)]
+  }
+  return code
+}
+
 export function CreateGame() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -49,9 +60,8 @@ export function CreateGame() {
     setError(null)
 
     try {
-      // Use transaction to ensure code uniqueness
+      // Use transaction to atomically check code uniqueness and create the game
       const code = await runTransaction(db, async (t) => {
-        // Try up to 10 times to find a unique code
         for (let attempt = 0; attempt < 10; attempt++) {
           const generatedCode = generateCode()
           const gameDocRef = doc(db, 'games', generatedCode)
@@ -91,17 +101,6 @@ export function CreateGame() {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Helper function to generate a single code
-  function generateCode(): string {
-    const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-    const CODE_LENGTH = 5
-    let code = ''
-    for (let i = 0; i < CODE_LENGTH; i++) {
-      code += CHARSET[Math.floor(Math.random() * CHARSET.length)]
-    }
-    return code
   }
 
   return (

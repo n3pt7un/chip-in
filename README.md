@@ -50,7 +50,9 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
 ```
 
-> **Note**: Never commit `.env.local` to version control. It's already in `.gitignore`.
+<<<KEEP_HEAD
+> **Note**: Never commit `.env.local` to version control. It's already covered by `.gitignore`.
+>>>>>>> a968440 (Address PR review: security, correctness, and best practices)
 
 ### 3. Deploy Firestore security rules
 

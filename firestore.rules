@@ -29,10 +29,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    function isHost(uid, data) {
-      return data.hostId == uid;
-    }
-
     function isApprovedPlayer(uid, data) {
       return data.players[uid] != null
         && data.players[uid].status == 'approved';
@@ -65,7 +61,7 @@ service cloud.firestore {
         && existingData.players[uid].status == 'approved';
       let changedKeys = newData.diff(existingData).changedKeys();
 
-      // Player betting: can update pot, round, and their own player fields
+      // Player betting: can update pot and their own player fields
       let isBetting = changedKeys.hasOnly(['pot', 'players'])
         && newData.players.diff(existingData.players).changedKeys().hasOnly([uid])
         && newData.pot >= existingData.pot;

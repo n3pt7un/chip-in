@@ -28,11 +28,11 @@ export function BetControl({
   const clamp = (v: number) => Math.max(effectiveMinBet, Math.min(effectiveMaxBet, v))
 
   function setAmountClamped(v: number) {
-    setAmount(clamp(Math.round(v / minBet) * minBet || effectiveMinBet))
+    setAmount(clamp(Math.round(v / effectiveMinBet) * effectiveMinBet || effectiveMinBet))
   }
 
   async function handleBet() {
-    if (loading || disabled || amount < effectiveMinBet || amount > effectiveMaxBet) return
+    if (loading || disabled || !canAffordMinBet || amount < effectiveMinBet || amount > effectiveMaxBet) return
     setLoading(true)
     setError(null)
     try {
@@ -46,7 +46,7 @@ export function BetControl({
     }
   }
 
-  const canBet = !disabled && !loading && amount >= effectiveMinBet && amount <= effectiveMaxBet && maxBet > 0
+  const canBet = !disabled && !loading && canAffordMinBet && amount >= effectiveMinBet && amount <= effectiveMaxBet
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -84,7 +84,7 @@ export function BetControl({
       <div className="flex items-center gap-3">
         <StepButton
           label="−"
-          onClick={() => setAmountClamped(amount - minBet)}
+          onClick={() => setAmountClamped(amount - effectiveMinBet)}
           disabled={disabled || amount <= effectiveMinBet || !canAffordMinBet}
         />
         <div className="flex-1 flex flex-col gap-1">
@@ -93,7 +93,7 @@ export function BetControl({
               type="range"
               min={effectiveMinBet}
               max={effectiveMaxBet}
-              step={minBet}
+              step={effectiveMinBet}
               value={amount}
               onChange={(e) => setAmountClamped(Number(e.target.value))}
               disabled={disabled}
@@ -114,7 +114,7 @@ export function BetControl({
         </div>
         <StepButton
           label="+"
-          onClick={() => setAmountClamped(amount + minBet)}
+          onClick={() => setAmountClamped(amount + effectiveMinBet)}
           disabled={disabled || amount >= effectiveMaxBet || !canAffordMinBet}
         />
       </div>
