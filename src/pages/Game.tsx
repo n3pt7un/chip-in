@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSound } from '../hooks/useSound'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { onSnapshot, runTransaction, updateDoc, setDoc, FieldPath, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +20,8 @@ export function Game() {
   const [showTakePot, setShowTakePot] = useState(false)
   const [takingPot, setTakingPot] = useState(false)
   const [endingGame, setEndingGame] = useState(false)
+
+  const { play } = useSound()
 
   // Save active game on mount so we can rejoin if app is killed
   useEffect(() => {
@@ -120,6 +123,7 @@ export function Game() {
         new FieldPath('players', user.uid, 'currentBet'), player.currentBet + amount
       )
     })
+    play('bet')
   }
 
   async function handleTakePot() {
@@ -144,6 +148,7 @@ export function Game() {
           players: updatedPlayers,
         })
       })
+      play('takePot')
       setShowTakePot(false)
     } catch (e) {
       console.error('Take pot error:', e)
