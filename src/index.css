@@ -4,6 +4,12 @@
 
 :root {
   --bg: #0A0A0A;
+  --color-accent: #28C76F;
+  --color-accent-dark: #1E9A52;
+  --color-surface: #141414;
+  --color-surface-2: #0F1F16;
+  --color-bg: #0A0A0A;
+  --color-text-muted: #2A7A50;
 }
 
 html,

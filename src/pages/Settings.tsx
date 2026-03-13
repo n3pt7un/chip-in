@@ -2,6 +2,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useUserPrefs } from '../contexts/UserPrefsContext'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
+import { THEMES } from '../lib/themes'
 
 const CURRENCY_OPTIONS = ['chips', '$', '€']
 
@@ -48,6 +49,30 @@ export default function Settings() {
                   }`}
                 >
                   {sym}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Theme */}
+          <div className="mb-6">
+            <p className="text-sm font-medium mb-3">Theme</p>
+            <div className="grid grid-cols-2 gap-2">
+              {THEMES.map(theme => (
+                <button
+                  key={theme.id}
+                  onClick={() => updatePrefs({ theme: theme.id })}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors duration-150 ${
+                    prefs.theme === theme.id || (!prefs.theme && theme.id === 'terminal')
+                      ? 'border-accent/60 bg-accent/10'
+                      : 'border-surface-border bg-surface'
+                  }`}
+                >
+                  <span
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: theme.accent }}
+                  />
+                  <span className="text-sm font-medium">{theme.name}</span>
                 </button>
               ))}
             </div>
