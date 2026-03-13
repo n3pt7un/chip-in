@@ -1,6 +1,5 @@
-import { getDoc } from 'firebase/firestore'
+import { getDoc, doc } from 'firebase/firestore'
 import type { Firestore } from 'firebase/firestore'
-import { gameRef } from '../lib/firebase'
 
 // Excludes visually ambiguous characters: I, O, 0, 1
 const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -16,12 +15,12 @@ function generateCode(): string {
 
 /**
  * Generates a unique 5-character game code that doesn't already exist in Firestore.
- * @param _db - Firestore instance (unused directly, but documents the dependency)
+ * @param db - Firestore instance
  */
-export async function generateUniqueCode(_db: Firestore): Promise<string> {
+export async function generateUniqueCode(db: Firestore): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = generateCode()
-    const snap = await getDoc(gameRef(code))
+    const snap = await getDoc(doc(db, 'games', code))
     if (!snap.exists()) return code
   }
   throw new Error('Failed to generate a unique game code after 10 attempts. Please try again.')

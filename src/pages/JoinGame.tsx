@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { getDoc, updateDoc } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 import { gameRef } from '../lib/firebase'
@@ -13,8 +13,7 @@ export function JoinGame() {
   const [error, setError] = useState<string | null>(null)
 
   if (!user) {
-    navigate('/')
-    return null
+    return <Navigate to="/" replace />
   }
 
   async function handleJoin(e: React.FormEvent) {

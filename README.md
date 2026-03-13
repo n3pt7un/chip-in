@@ -33,18 +33,24 @@ A real-time virtual poker chip tracker PWA for home games. No physical chips nee
 
 ### 2. Add your Firebase config
 
-Open `src/lib/firebase.ts` and replace the placeholder config:
+Create a `.env.local` file in the project root:
 
-```typescript
-const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID',
-}
+```bash
+cp .env.example .env.local
 ```
+
+Then open `.env.local` and fill in your Firebase project values:
+
+```env
+VITE_FIREBASE_API_KEY=your-api-key-here
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+```
+
+> **Note**: Never commit `.env.local` to version control. It's already in `.gitignore`.
 
 ### 3. Deploy Firestore security rules
 

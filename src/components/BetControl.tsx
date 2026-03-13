@@ -15,25 +15,30 @@ export function BetControl({
   onBet,
   disabled = false,
 }: BetControlProps) {
-  const [amount, setAmount] = useState(() => Math.min(minBet, maxBet))
+  // Handle case where player doesn't have enough chips to meet minimum bet
+  const canAffordMinBet = maxBet >= minBet
+  const effectiveMinBet = canAffordMinBet ? minBet : maxBet
+  const effectiveMaxBet = Math.max(effectiveMinBet, maxBet)
+
+  const [amount, setAmount] = useState(() => Math.min(effectiveMinBet, effectiveMaxBet))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Keep amount in valid range if props change
-  const clamp = (v: number) => Math.max(minBet, Math.min(maxBet, v))
+  const clamp = (v: number) => Math.max(effectiveMinBet, Math.min(effectiveMaxBet, v))
 
   function setAmountClamped(v: number) {
-    setAmount(clamp(Math.round(v / minBet) * minBet || minBet))
+    setAmount(clamp(Math.round(v / minBet) * minBet || effectiveMinBet))
   }
 
   async function handleBet() {
-    if (loading || disabled || amount < minBet || amount > maxBet) return
+    if (loading || disabled || amount < effectiveMinBet || amount > effectiveMaxBet) return
     setLoading(true)
     setError(null)
     try {
       await onBet(amount)
       // Reset to min bet after successful bet
-      setAmount(clamp(minBet))
+      setAmount(clamp(effectiveMinBet))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Bet failed. Try again.')
     } finally {
@@ -41,10 +46,19 @@ export function BetControl({
     }
   }
 
-  const canBet = !disabled && !loading && amount >= minBet && amount <= maxBet && maxBet > 0
+  const canBet = !disabled && !loading && amount >= effectiveMinBet && amount <= effectiveMaxBet && maxBet > 0
 
   return (
     <div className="flex flex-col gap-3 w-full">
+      {/* Warning when player can't afford minimum bet */}
+      {!canAffordMinBet && maxBet > 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+          <p className="text-xs text-yellow-300 text-center">
+            Not enough chips for minimum bet. You can only bet up to {maxBet.toLocaleString()}.
+          </p>
+        </div>
+      )}
+
       {/* Preset buttons */}
       <div className="grid grid-cols-3 gap-2">
         {presets.map((preset) => {
@@ -71,23 +85,29 @@ export function BetControl({
         <StepButton
           label="−"
           onClick={() => setAmountClamped(amount - minBet)}
-          disabled={disabled || amount <= minBet}
+          disabled={disabled || amount <= effectiveMinBet || !canAffordMinBet}
         />
         <div className="flex-1 flex flex-col gap-1">
-          <input
-            type="range"
-            min={minBet}
-            max={maxBet}
-            step={minBet}
-            value={amount}
-            onChange={(e) => setAmountClamped(Number(e.target.value))}
-            disabled={disabled || maxBet <= minBet}
-            aria-label="Bet amount"
-            aria-valuemin={minBet}
-            aria-valuemax={maxBet}
-            aria-valuenow={amount}
-            className="w-full disabled:opacity-30"
-          />
+          {canAffordMinBet ? (
+            <input
+              type="range"
+              min={effectiveMinBet}
+              max={effectiveMaxBet}
+              step={minBet}
+              value={amount}
+              onChange={(e) => setAmountClamped(Number(e.target.value))}
+              disabled={disabled}
+              aria-label="Bet amount"
+              aria-valuemin={effectiveMinBet}
+              aria-valuemax={effectiveMaxBet}
+              aria-valuenow={amount}
+              className="w-full disabled:opacity-30"
+            />
+          ) : (
+            <div className="h-[20px] flex items-center justify-center">
+              <div className="w-full h-[6px] bg-surface-2 rounded-full" />
+            </div>
+          )}
           <p className="text-center text-lg font-bold text-white tabular-nums">
             {amount.toLocaleString()}
           </p>
@@ -95,7 +115,7 @@ export function BetControl({
         <StepButton
           label="+"
           onClick={() => setAmountClamped(amount + minBet)}
-          disabled={disabled || amount >= maxBet}
+          disabled={disabled || amount >= effectiveMaxBet || !canAffordMinBet}
         />
       </div>
 

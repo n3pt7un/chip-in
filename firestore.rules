@@ -4,8 +4,10 @@ service cloud.firestore {
 
     match /games/{gameCode} {
 
-      // Any authenticated user can read game documents (needed for join flow + real-time sync)
-      allow read: if request.auth != null;
+      // Allow get for any authenticated user (needed for join flow)
+      // But disallow list to prevent enumeration of all games
+      allow get: if request.auth != null;
+      allow list: if false;
 
       // Only authenticated users can create a game, as the host
       allow create: if request.auth != null
@@ -17,9 +19,10 @@ service cloud.firestore {
 
       // Updates are allowed for authenticated users with a valid role
       allow update: if request.auth != null && (
-        isHost(request.auth.uid, resource.data)
-        || isApprovedPlayer(request.auth.uid, resource.data)
+        isHostUpdate(request.auth.uid, resource.data, request.resource.data)
+        || isApprovedPlayerUpdate(request.auth.uid, resource.data, request.resource.data)
         || isJoiningPlayer(request.auth.uid, resource.data, request.resource.data)
+        || isLeavingPlayer(request.auth.uid, resource.data, request.resource.data)
       );
 
       // Games are never deleted — they end with status: 'ended'
@@ -35,16 +38,70 @@ service cloud.firestore {
         && data.players[uid].status == 'approved';
     }
 
+    // Host can approve players, change game status, and modify pot/round during take-pot
+    function isHostUpdate(uid, existingData, newData) {
+      let isGameHost = existingData.hostId == uid;
+      let changedKeys = newData.diff(existingData).changedKeys();
+
+      // Host can approve players (change player.X.status from pending to approved)
+      let approvingPlayer = changedKeys.hasOnly(['players'])
+        && newData.players.diff(existingData.players).changedKeys().size() == 1;
+
+      // Host can start game (change status from lobby to active)
+      let startingGame = changedKeys.hasOnly(['status'])
+        && existingData.status == 'lobby'
+        && newData.status == 'active';
+
+      // Host can end game (change status to ended)
+      let endingGame = changedKeys.hasOnly(['status'])
+        && newData.status == 'ended';
+
+      return isGameHost && (approvingPlayer || startingGame || endingGame);
+    }
+
+    // Approved players can only update their own balance/currentBet and the pot
+    function isApprovedPlayerUpdate(uid, existingData, newData) {
+      let isPlayerApproved = existingData.players[uid] != null
+        && existingData.players[uid].status == 'approved';
+      let changedKeys = newData.diff(existingData).changedKeys();
+
+      // Player betting: can update pot, round, and their own player fields
+      let isBetting = changedKeys.hasOnly(['pot', 'players'])
+        && newData.players.diff(existingData.players).changedKeys().hasOnly([uid])
+        && newData.pot >= existingData.pot;
+
+      // Player taking pot: can update pot, round, and all players' currentBet/balance
+      let isTakingPot = changedKeys.hasOnly(['pot', 'round', 'players'])
+        && newData.pot == 0
+        && newData.round == existingData.round + 1;
+
+      return isPlayerApproved && (isBetting || isTakingPot);
+    }
+
+    // A new player joining adds only themselves with pending status
     function isJoiningPlayer(uid, existingData, newData) {
-      // A new player is adding only themselves with pending status
-      // and nothing else in the game document changes
+      let changedKeys = newData.diff(existingData).changedKeys();
+      let playerKeys = newData.players.diff(existingData.players).changedKeys();
+
       return existingData.players[uid] == null
         && newData.players[uid] != null
         && newData.players[uid].status == 'pending'
         && existingData.status == 'lobby'
-        && newData.hostId == existingData.hostId
-        && newData.status == existingData.status
-        && newData.pot == existingData.pot;
+        && changedKeys.hasOnly(['players'])
+        && playerKeys.hasOnly([uid]);
+    }
+
+    // A player (pending or approved) can remove themselves from lobby
+    function isLeavingPlayer(uid, existingData, newData) {
+      let changedKeys = newData.diff(existingData).changedKeys();
+      let playerKeys = newData.players.diff(existingData.players).changedKeys();
+
+      return existingData.players[uid] != null
+        && !(uid in newData.players)
+        && existingData.status == 'lobby'
+        && existingData.hostId != uid
+        && changedKeys.hasOnly(['players'])
+        && playerKeys.hasOnly([uid]);
     }
   }
 }
