@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 interface BetControlProps {
   minBet: number
@@ -23,12 +23,38 @@ export function BetControl({
   const [amount, setAmount] = useState(() => Math.min(effectiveMinBet, effectiveMaxBet))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [rawInput, setRawInput] = useState('')
 
   // Keep amount in valid range if props change
   const clamp = (v: number) => Math.max(effectiveMinBet, Math.min(effectiveMaxBet, v))
 
-  function setAmountClamped(v: number) {
+  // Used by slider and +/- step buttons — snaps to minBet increments
+  const setAmountSnapped = (v: number) =>
     setAmount(clamp(Math.round(v / effectiveMinBet) * effectiveMinBet || effectiveMinBet))
+
+  // Used by preset buttons and typed input — exact clamp, no step quantization
+  const setAmountExact = (v: number) =>
+    setAmount(clamp(v))
+
+  const handleAmountTap = () => {
+    if (!canAffordMinBet) return
+    setRawInput(String(amount))
+    setIsEditing(true)
+  }
+
+  const handleRawInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRawInput(e.target.value)
+  }
+
+  const commitRawInput = () => {
+    const parsed = parseInt(rawInput, 10)
+    if (!isNaN(parsed)) setAmountExact(parsed)
+    setIsEditing(false)
+  }
+
+  const handleRawInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') commitRawInput()
   }
 
   async function handleBet() {
@@ -66,7 +92,7 @@ export function BetControl({
           return (
             <button
               key={preset}
-              onClick={() => valid && setAmountClamped(preset)}
+              onClick={() => valid && setAmountExact(preset)}
               disabled={!valid || disabled}
               className={`py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                 amount === preset && valid
@@ -84,7 +110,7 @@ export function BetControl({
       <div className="flex items-center gap-3">
         <StepButton
           label="−"
-          onClick={() => setAmountClamped(amount - effectiveMinBet)}
+          onClick={() => setAmountSnapped(amount - effectiveMinBet)}
           disabled={disabled || amount <= effectiveMinBet || !canAffordMinBet}
         />
         <div className="flex-1 flex flex-col gap-1">
@@ -95,7 +121,7 @@ export function BetControl({
               max={effectiveMaxBet}
               step={effectiveMinBet}
               value={amount}
-              onChange={(e) => setAmountClamped(Number(e.target.value))}
+              onChange={(e) => setAmountSnapped(Number(e.target.value))}
               disabled={disabled}
               aria-label="Bet amount"
               aria-valuemin={effectiveMinBet}
@@ -108,13 +134,34 @@ export function BetControl({
               <div className="w-full h-[6px] bg-surface-2 rounded-full" />
             </div>
           )}
-          <p className="text-center text-lg font-bold text-white tabular-nums">
-            {amount.toLocaleString()}
-          </p>
+          {isEditing ? (
+            <input
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={rawInput}
+              onChange={handleRawInputChange}
+              onBlur={commitRawInput}
+              onKeyDown={handleRawInputKeyDown}
+              autoFocus
+              aria-label="Enter bet amount"
+              className="text-center text-2xl font-bold text-white tabular-nums bg-transparent border-b border-accent outline-none w-full"
+            />
+          ) : (
+            <p
+              onClick={handleAmountTap}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => (e.key === ' ' || e.key === 'Enter') && handleAmountTap()}
+              className="text-center text-2xl font-bold text-white tabular-nums cursor-pointer underline decoration-dotted decoration-white/20"
+            >
+              {amount}
+            </p>
+          )}
         </div>
         <StepButton
           label="+"
-          onClick={() => setAmountClamped(amount + effectiveMinBet)}
+          onClick={() => setAmountSnapped(amount + effectiveMinBet)}
           disabled={disabled || amount >= effectiveMaxBet || !canAffordMinBet}
         />
       </div>
