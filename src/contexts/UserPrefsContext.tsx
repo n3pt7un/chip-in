@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { onSnapshot, setDoc } from 'firebase/firestore'
 import { useAuth } from './AuthContext'
@@ -10,8 +10,11 @@ const DEFAULT_PREFS: UserPrefs = {
   currencySymbol: 'chips',
   soundEnabled: false,
   displayName: '',
-  theme: 'dark',
+  theme: DEFAULT_THEME_ID,
 }
+
+// Apply on module load so the default theme is present before first render
+applyTheme(getTheme(DEFAULT_THEME_ID))
 
 interface UserPrefsContextValue {
   prefs: UserPrefs
@@ -31,10 +34,7 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [prefs, setPrefs] = useState<UserPrefs>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    applyTheme(getTheme(DEFAULT_THEME_ID))
-  }, [])
+  const appliedThemeRef = useRef(DEFAULT_THEME_ID)
 
   useEffect(() => {
     if (!user) {
@@ -49,7 +49,11 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
       } else {
         const newPrefs = { ...DEFAULT_PREFS, ...snap.data() } as UserPrefs
         setPrefs(newPrefs)
-        applyTheme(getTheme(newPrefs.theme || DEFAULT_THEME_ID))
+        const themeId = newPrefs.theme || DEFAULT_THEME_ID
+        if (themeId !== appliedThemeRef.current) {
+          applyTheme(getTheme(themeId))
+          appliedThemeRef.current = themeId
+        }
       }
       setLoading(false)
     })
@@ -58,7 +62,10 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
 
   const updatePrefs = (partial: Partial<UserPrefs>) => {
     if (!user) return
-    if (partial.theme) applyTheme(getTheme(partial.theme))
+    if (partial.theme && partial.theme !== appliedThemeRef.current) {
+      applyTheme(getTheme(partial.theme))
+      appliedThemeRef.current = partial.theme
+    }
     setDoc(userRef(user.uid), partial, { merge: true })
   }
 

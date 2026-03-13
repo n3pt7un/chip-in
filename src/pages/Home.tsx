@@ -1,3 +1,4 @@
+import LoadingSpinner from '../components/LoadingSpinner'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getDoc } from 'firebase/firestore'
@@ -41,7 +42,7 @@ export function Home() {
   if (loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-bg">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner />
       </div>
     )
   }

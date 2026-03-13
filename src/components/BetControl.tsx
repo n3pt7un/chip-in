@@ -98,7 +98,7 @@ export function BetControl({
                 amount === preset && valid
                   ? 'bg-accent text-black'
                   : 'bg-surface-2 text-white/70 active:bg-surface border border-white/10'
-              } disabled:opacity-30 disabled:cursor-not-allowed`}
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {preset.toLocaleString()}
             </button>
@@ -127,7 +127,7 @@ export function BetControl({
               aria-valuemin={effectiveMinBet}
               aria-valuemax={effectiveMaxBet}
               aria-valuenow={amount}
-              className="w-full disabled:opacity-30"
+              className="w-full disabled:opacity-50"
             />
           ) : (
             <div className="h-[20px] flex items-center justify-center">
@@ -175,7 +175,7 @@ export function BetControl({
       <button
         onClick={handleBet}
         disabled={!canBet}
-        className="w-full py-4 rounded-2xl bg-accent text-black font-bold text-base transition-colors active:bg-accent-dark disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full py-4 rounded-2xl bg-accent text-black font-bold text-base transition-colors active:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? 'Placing…' : `Bet ${amount.toLocaleString()}`}
       </button>
@@ -196,7 +196,7 @@ function StepButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-11 h-11 flex-shrink-0 rounded-xl bg-surface-2 text-white text-xl font-bold flex items-center justify-center border border-white/10 active:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      className="w-11 h-11 flex-shrink-0 rounded-xl bg-surface-2 text-white text-xl font-bold flex items-center justify-center border border-white/10 active:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       aria-label={label === '+' ? 'Increase bet' : 'Decrease bet'}
     >
       {label}

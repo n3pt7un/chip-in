@@ -122,7 +122,7 @@ export function JoinGame() {
           <button
             type="submit"
             disabled={loading || code.length !== 5}
-            className="w-full py-4 rounded-2xl bg-accent text-black font-bold text-base disabled:opacity-40 active:bg-accent-dark transition-colors"
+            className="w-full py-4 rounded-2xl bg-accent text-black font-bold text-base disabled:opacity-50 active:bg-accent-dark transition-colors"
           >
             {loading ? 'Joining…' : 'Join Game'}
           </button>

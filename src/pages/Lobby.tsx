@@ -1,3 +1,4 @@
+import LoadingSpinner from '../components/LoadingSpinner'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { onSnapshot, updateDoc, deleteField, FieldPath } from 'firebase/firestore'
@@ -63,7 +64,7 @@ export function Lobby() {
   if (!game) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-bg">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner />
       </div>
     )
   }
@@ -184,7 +185,7 @@ export function Lobby() {
               <button
                 onClick={handleStart}
                 disabled={!canStart}
-                className="w-full py-4 rounded-2xl bg-accent text-black font-bold text-base disabled:opacity-30 active:bg-accent-dark transition-colors"
+                className="w-full py-4 rounded-2xl bg-accent text-black font-bold text-base disabled:opacity-50 active:bg-accent-dark transition-colors"
               >
                 {canStart ? 'Start Game' : `Need at least 2 approved players`}
               </button>

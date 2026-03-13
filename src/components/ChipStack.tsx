@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
 
 interface ChipDenomination {
@@ -69,26 +70,20 @@ interface ChipStackProps {
 }
 
 export default function ChipStack({ amount, maxChips = 8, chipSize = 28, className = '' }: ChipStackProps) {
-  if (amount <= 0) return null
-
-  // Break amount into chip counts per denomination
-  const counts: { denom: ChipDenomination; count: number }[] = []
-  let remaining = amount
-  for (const denom of DENOMINATIONS) {
-    const count = Math.floor(remaining / denom.value)
-    if (count > 0) {
-      counts.push({ denom, count })
+  const chips = useMemo(() => {
+    if (amount <= 0) return []
+    const result: ChipDenomination[] = []
+    let remaining = amount
+    for (const denom of DENOMINATIONS) {
+      const count = Math.floor(remaining / denom.value)
+      for (let i = 0; i < count && result.length < maxChips; i++) result.push(denom)
       remaining -= count * denom.value
+      if (result.length >= maxChips) break
     }
-  }
+    return result
+  }, [amount, maxChips])
 
-  // Flatten into a list of chips (capped), highest denomination first
-  const chips: ChipDenomination[] = []
-  for (const { denom, count } of counts) {
-    for (let i = 0; i < count && chips.length < maxChips; i++) {
-      chips.push(denom)
-    }
-  }
+  if (chips.length === 0) return null
 
   const overlap = chipSize * 0.45  // how much chips overlap when stacked
 

@@ -1,3 +1,4 @@
+import LoadingSpinner from '../components/LoadingSpinner'
 import { useEffect, useState } from 'react'
 import { useSound } from '../hooks/useSound'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
@@ -89,7 +90,7 @@ export function Game() {
   if (!game) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-bg">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner />
       </div>
     )
   }
@@ -167,19 +168,11 @@ export function Game() {
     }
   }
 
-  const handlePauseGame = async () => {
+  const handleSetGameStatus = async (status: 'paused' | 'active') => {
     try {
-      await updateDoc(gameRef(gameCode!), { status: 'paused' })
+      await updateDoc(gameRef(gameCode!), { status })
     } catch (err) {
-      console.error('Failed to pause game:', err)
-    }
-  }
-
-  const handleResumeGame = async () => {
-    try {
-      await updateDoc(gameRef(gameCode!), { status: 'active' })
-    } catch (err) {
-      console.error('Failed to resume game:', err)
+      console.error('Failed to update game status:', err)
     }
   }
 
@@ -194,12 +187,12 @@ export function Game() {
         </div>
         <div className="flex items-center gap-2">
           {isHost && game.status === 'active' && (
-            <button onClick={handlePauseGame} className="text-xs text-text-muted border border-surface-border px-3 py-1.5 rounded-lg cursor-pointer">
+            <button onClick={() => handleSetGameStatus('paused')} className="text-xs text-text-muted border border-surface-border px-3 py-1.5 rounded-lg cursor-pointer">
               Pause
             </button>
           )}
           {isHost && game.status === 'paused' && (
-            <button onClick={handleResumeGame} className="text-xs text-accent border border-accent/30 px-3 py-1.5 rounded-lg cursor-pointer">
+            <button onClick={() => handleSetGameStatus('active')} className="text-xs text-accent border border-accent/30 px-3 py-1.5 rounded-lg cursor-pointer">
               Resume
             </button>
           )}

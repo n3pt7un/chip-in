@@ -1,3 +1,4 @@
+import LoadingSpinner from '../components/LoadingSpinner'
 import { useEffect, useState } from 'react'
 import { onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,10 +24,10 @@ export default function History() {
     const q = query(gameHistoryCollectionRef(user.uid), orderBy('endedAt', 'desc'), limit(30))
     const unsub = onSnapshot(q, snap => {
       setEntries(snap.docs.map(d => d.data() as GameHistoryEntry))
-      setLoading(false)
+      if (loading) setLoading(false)
     })
     return unsub
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return null
 
@@ -37,7 +38,7 @@ export default function History() {
 
         {loading && (
           <div className="flex justify-center pt-20">
-            <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+            <LoadingSpinner size="sm" />
           </div>
         )}
 

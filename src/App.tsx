@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { UserPrefsProvider } from './contexts/UserPrefsContext'
 import { Home } from './pages/Home'
 import BottomTabBar from './components/BottomTabBar'
+import LoadingSpinner from './components/LoadingSpinner'
 
 const CreateGame = lazy(() => import('./pages/CreateGame').then(m => ({ default: m.CreateGame })))
 const JoinGame = lazy(() => import('./pages/JoinGame').then(m => ({ default: m.JoinGame })))
@@ -15,7 +16,7 @@ const History = lazy(() => import('./pages/History'))
 function PageLoader() {
   return (
     <div className="min-h-dvh bg-bg flex items-center justify-center">
-      <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+      <LoadingSpinner size="sm" />
     </div>
   )
 }
