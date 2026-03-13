@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
-import { getDoc, updateDoc } from 'firebase/firestore'
+import { getDoc, setDoc } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 import { gameRef } from '../lib/firebase'
+import { saveActiveGame } from '../lib/activeGame'
 
 export function JoinGame() {
   const { user } = useAuth()
@@ -50,21 +51,25 @@ export function JoinGame() {
 
       // Already in the game — go straight to lobby
       if (game.players?.[user.uid]) {
+        saveActiveGame(user.uid, trimmed)
         navigate(`/lobby/${trimmed}`)
         return
       }
 
-      // Add player as pending
-      await updateDoc(gameRef(trimmed), {
-        [`players.${user.uid}`]: {
-          displayName: user.displayName ?? 'Player',
-          photoURL: user.photoURL ?? '',
-          balance: game.startingBalance,
-          currentBet: 0,
-          status: 'pending',
+      // Merge by map key so any valid UID works (including IDs with path-like characters).
+      await setDoc(gameRef(trimmed), {
+        players: {
+          [user.uid]: {
+            displayName: user.displayName ?? 'Player',
+            photoURL: user.photoURL ?? '',
+            balance: game.startingBalance,
+            currentBet: 0,
+            status: 'pending',
+          },
         },
-      })
+      }, { merge: true })
 
+      saveActiveGame(user.uid, trimmed)
       navigate(`/lobby/${trimmed}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to join game.')
@@ -74,12 +79,12 @@ export function JoinGame() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#0f1117]">
+    <div className="min-h-dvh flex flex-col bg-bg">
       {/* Header */}
       <div className="flex items-center gap-4 px-4 pt-safe-top pt-4 pb-4">
         <button
           onClick={() => navigate('/')}
-          className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface text-white/60 active:text-white transition-colors"
+          className="text-text-muted active:text-white transition-colors"
           aria-label="Go back"
         >
           ←
@@ -87,10 +92,10 @@ export function JoinGame() {
         <h1 className="text-xl font-bold text-white">Join Game</h1>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-safe-bottom pb-8 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-safe-bottom pb-8 pb-20 max-w-sm mx-auto w-full">
         <form onSubmit={handleJoin} className="flex flex-col gap-6 w-full">
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold uppercase tracking-widest text-white/40">
+            <label className="text-xs font-semibold uppercase tracking-widest text-text-muted">
               Game Code
             </label>
             <input
@@ -106,7 +111,7 @@ export function JoinGame() {
               autoCapitalize="characters"
               autoComplete="off"
               spellCheck={false}
-              className="bg-surface border border-white/10 rounded-2xl px-4 py-5 text-white text-center text-3xl font-bold tracking-[0.5em] focus:outline-none focus:border-accent/60 transition-colors placeholder:text-white/20 placeholder:tracking-[0.5em]"
+              className="bg-surface border border-surface-border rounded-2xl px-4 py-5 text-white text-center text-3xl font-bold tracking-[0.5em] focus:outline-none focus:border-accent/60 transition-colors placeholder:text-white/20 placeholder:tracking-[0.5em]"
             />
           </div>
 

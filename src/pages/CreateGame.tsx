@@ -4,6 +4,7 @@ import { runTransaction, serverTimestamp, doc } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 import { db } from '../lib/firebase'
 import type { GameDoc } from '../types'
+import { saveActiveGame } from '../lib/activeGame'
 
 const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const CODE_LENGTH = 5
@@ -95,6 +96,7 @@ export function CreateGame() {
         throw new Error('Failed to generate a unique game code after 10 attempts. Please try again.')
       })
 
+      saveActiveGame(user.uid, code)
       navigate(`/lobby/${code}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create game.')
@@ -104,12 +106,12 @@ export function CreateGame() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#0f1117]">
+    <div className="min-h-dvh flex flex-col bg-bg">
       {/* Header */}
       <div className="flex items-center gap-4 px-4 pt-safe-top pt-4 pb-4">
         <button
           onClick={() => navigate('/')}
-          className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface text-white/60 active:text-white transition-colors"
+          className="text-text-muted active:text-white transition-colors"
           aria-label="Go back"
         >
           ←
@@ -118,9 +120,9 @@ export function CreateGame() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleCreate} className="flex-1 flex flex-col px-4 pb-8 gap-6 max-w-md mx-auto w-full">
+      <form onSubmit={handleCreate} className="flex-1 flex flex-col px-4 pb-8 pb-safe-bottom pb-20 gap-6 max-w-md mx-auto w-full">
         <Section label="Starting Balance">
-          <p className="text-xs text-white/40 mb-3">Chips each player starts with</p>
+          <p className="text-xs text-text-muted mb-3">Chips each player starts with</p>
           <NumberInput
             value={startingBalance}
             onChange={setStartingBalance}
@@ -130,7 +132,7 @@ export function CreateGame() {
         </Section>
 
         <Section label="Minimum Bet">
-          <p className="text-xs text-white/40 mb-3">Smallest allowed bet (also the slider step)</p>
+          <p className="text-xs text-text-muted mb-3">Smallest allowed bet (also the slider step)</p>
           <NumberInput
             value={minBet}
             onChange={setMinBet}
@@ -140,7 +142,7 @@ export function CreateGame() {
         </Section>
 
         <Section label="Quick Bet Presets">
-          <p className="text-xs text-white/40 mb-3">Three shortcut bet amounts</p>
+          <p className="text-xs text-text-muted mb-3">Three shortcut bet amounts</p>
           <div className="grid grid-cols-3 gap-2">
             {([0, 1, 2] as const).map((i) => (
               <input
@@ -150,7 +152,7 @@ export function CreateGame() {
                 onChange={(e) => updatePreset(i, Number(e.target.value))}
                 min={1}
                 required
-                className="bg-surface-2 border border-white/10 rounded-xl px-3 py-3 text-white text-center text-sm font-semibold focus:outline-none focus:border-accent/60 transition-colors"
+                className="bg-surface-2 border border-surface-border rounded-xl px-3 py-3 text-white text-center text-sm font-semibold focus:outline-none focus:border-accent/60 transition-colors"
               />
             ))}
           </div>
@@ -177,7 +179,7 @@ export function CreateGame() {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-3">{label}</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-3">{label}</h2>
       {children}
     </div>
   )
@@ -199,7 +201,7 @@ function NumberInput({
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - step))}
-        className="w-11 h-11 rounded-xl bg-surface-2 text-white text-xl font-bold flex items-center justify-center border border-white/10 active:bg-surface transition-colors"
+        className="w-11 h-11 rounded-xl bg-surface-2 text-white text-xl font-bold flex items-center justify-center border border-surface-border active:bg-surface transition-colors"
       >
         −
       </button>
@@ -209,12 +211,12 @@ function NumberInput({
         onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
         min={min}
         required
-        className="flex-1 bg-surface border border-white/10 rounded-xl px-3 py-3 text-white text-center text-lg font-semibold focus:outline-none focus:border-accent/60 transition-colors"
+        className="flex-1 bg-surface border border-surface-border rounded-xl px-3 py-3 text-white text-center text-lg font-semibold focus:outline-none focus:border-accent/60 transition-colors"
       />
       <button
         type="button"
         onClick={() => onChange(value + step)}
-        className="w-11 h-11 rounded-xl bg-surface-2 text-white text-xl font-bold flex items-center justify-center border border-white/10 active:bg-surface transition-colors"
+        className="w-11 h-11 rounded-xl bg-surface-2 text-white text-xl font-bold flex items-center justify-center border border-surface-border active:bg-surface transition-colors"
       >
         +
       </button>
