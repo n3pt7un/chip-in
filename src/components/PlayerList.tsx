@@ -31,7 +31,7 @@ export function PlayerList({
   })
 
   return (
-    <div className="flex flex-col gap-2 w-full">
+    <div className="flex flex-col gap-0 w-full">
       {sorted.map(([uid, player]) => (
         <PlayerRow
           key={uid}
@@ -68,10 +68,10 @@ function PlayerRow({
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${
+      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
         isCurrentUser
-          ? 'bg-accent/10 border border-accent/30'
-          : 'bg-surface border border-white/5'
+          ? 'border-b border-surface-border border-l-2 border-l-accent pl-3'
+          : 'border-b border-surface-border'
       }`}
     >
       {/* Avatar */}
@@ -95,7 +95,7 @@ function PlayerRow({
           {isCurrentUser && ' (you)'}
         </p>
         {gameStatus === 'lobby' && (
-          <p className={`text-xs mt-0.5 ${isPending ? 'text-yellow-400' : 'text-white/40'}`}>
+          <p className={`text-xs mt-0.5 ${isPending ? 'text-yellow-400' : 'text-text-muted'}`}>
             {isPending ? 'Waiting for approval' : 'Approved'}
           </p>
         )}
