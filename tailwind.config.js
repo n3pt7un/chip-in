@@ -4,10 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        accent: '#c9a84c',
-        'accent-dark': '#a8893a',
-        surface: '#1a1d27',
-        'surface-2': '#242736',
+        accent: '#28C76F',
+        'accent-dark': '#1E9A52',
+        surface: '#141414',
+        'surface-2': '#0F1F16',
+        'surface-border': 'rgba(255,255,255,0.07)',
+        bg: '#0A0A0A',
+        text: '#FFFFFF',
+        'text-muted': '#2A7A50',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
