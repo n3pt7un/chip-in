@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ChipStack from './ChipStack'
 
 interface PotDisplayProps {
   pot: number
@@ -26,6 +27,7 @@ export function PotDisplay({ pot, round }: PotDisplayProps) {
       <p className={`text-6xl font-bold text-accent tabular-nums transition-transform duration-200 ${pulse ? 'scale-105' : 'scale-100'}`}>
         {pot.toLocaleString()}
       </p>
+      <ChipStack amount={pot} maxChips={8} chipSize={26} className="mt-3" />
     </div>
   )
 }
