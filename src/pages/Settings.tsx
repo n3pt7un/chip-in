@@ -93,14 +93,19 @@ export default function Settings() {
             />
           </div>
 
-          {/* Sound (placeholder) */}
-          <div className="flex items-center justify-between py-4 border-b border-surface-border opacity-40">
-            <div>
+          {/* Sound toggle */}
+          <button
+            onClick={() => updatePrefs({ soundEnabled: !prefs.soundEnabled })}
+            className="w-full flex items-center justify-between py-4 border-b border-surface-border cursor-pointer"
+          >
+            <div className="text-left">
               <p className="text-sm font-medium">Sound Effects</p>
-              <p className="text-xs text-text-muted">Coming soon</p>
+              <p className="text-xs text-text-muted">Chip sounds on bet and pot take</p>
             </div>
-            <div className="w-10 h-6 bg-surface-2 rounded-full border border-surface-border" />
-          </div>
+            <div className={`w-10 h-6 rounded-full border transition-colors duration-200 flex items-center px-0.5 ${prefs.soundEnabled ? 'bg-accent border-accent' : 'bg-surface-2 border-surface-border'}`}>
+              <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${prefs.soundEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+            </div>
+          </button>
         </section>
 
         {/* App section */}
