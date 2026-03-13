@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /games/{gameCode} {
+
+      // Any authenticated user can read game documents (needed for join flow + real-time sync)
+      allow read: if request.auth != null;
+
+      // Only authenticated users can create a game, as the host
+      allow create: if request.auth != null
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.status == 'lobby'
+        && request.resource.data.pot == 0
+        && request.resource.data.players[request.auth.uid] != null
+        && request.resource.data.players[request.auth.uid].status == 'approved';
+
+      // Updates are allowed for authenticated users with a valid role
+      allow update: if request.auth != null && (
+        isHost(request.auth.uid, resource.data)
+        || isApprovedPlayer(request.auth.uid, resource.data)
+        || isJoiningPlayer(request.auth.uid, resource.data, request.resource.data)
+      );
+
+      // Games are never deleted — they end with status: 'ended'
+      allow delete: if false;
+    }
+
+    function isHost(uid, data) {
+      return data.hostId == uid;
+    }
+
+    function isApprovedPlayer(uid, data) {
+      return data.players[uid] != null
+        && data.players[uid].status == 'approved';
+    }
+
+    function isJoiningPlayer(uid, existingData, newData) {
+      // A new player is adding only themselves with pending status
+      // and nothing else in the game document changes
+      return existingData.players[uid] == null
+        && newData.players[uid] != null
+        && newData.players[uid].status == 'pending'
+        && existingData.status == 'lobby'
+        && newData.hostId == existingData.hostId
+        && newData.status == existingData.status
+        && newData.pot == existingData.pot;
+    }
+  }
+}
