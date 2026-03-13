@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { initializeFirestore, persistentLocalCache, doc } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, doc, collection } from 'firebase/firestore'
 
 // ─────────────────────────────────────────────────────────────
 // Firebase Configuration from Environment Variables
@@ -51,3 +51,11 @@ export const googleProvider = new GoogleAuthProvider()
 
 /** Shorthand to get a reference to a game document by its code */
 export const gameRef = (code: string) => doc(db, 'games', code)
+
+export const userRef = (uid: string) => doc(db, 'users', uid)
+
+export const gameHistoryRef = (uid: string, gameCode: string) =>
+  doc(db, 'users', uid, 'gameHistory', gameCode)
+
+export const gameHistoryCollectionRef = (uid: string) =>
+  collection(db, 'users', uid, 'gameHistory')
