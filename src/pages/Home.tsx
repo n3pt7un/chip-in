@@ -1,13 +1,46 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getDoc } from 'firebase/firestore'
+import { gameRef } from '../lib/firebase'
+import { loadActiveGame, clearActiveGame } from '../lib/activeGame'
 import { useAuth } from '../contexts/AuthContext'
 
 export function Home() {
-  const { user, loading, signIn, signOut } = useAuth()
+  const { user, loading, signIn } = useAuth()
   const navigate = useNavigate()
+
+  const [rejoinState, setRejoinState] = useState<{ code: string; route: string } | null>(null)
+  const [rejoinChecking, setRejoinChecking] = useState(false)
+
+  useEffect(() => {
+    if (!user) {
+      setRejoinState(null)
+      return
+    }
+    const code = loadActiveGame(user.uid)
+    if (!code) return
+
+    setRejoinChecking(true)
+    getDoc(gameRef(code)).then(snap => {
+      if (!snap.exists()) {
+        clearActiveGame(user.uid)
+        return
+      }
+      const data = snap.data()
+      if (data.status === 'ended' || !data.players?.[user.uid]) {
+        clearActiveGame(user.uid)
+        return
+      }
+      const route = data.status === 'active' || data.status === 'paused'
+        ? `/game/${code}`
+        : `/lobby/${code}`
+      setRejoinState({ code, route })
+    }).finally(() => setRejoinChecking(false))
+  }, [user])
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-[#0f1117]">
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -15,15 +48,13 @@ export function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[#0f1117]">
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-bg">
         <div className="flex flex-col items-center gap-8 w-full max-w-sm">
           {/* Logo */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-20 rounded-full bg-surface border-2 border-accent/30 flex items-center justify-center">
-              <span className="text-3xl">♠</span>
-            </div>
-            <h1 className="text-3xl font-bold text-white">chip in</h1>
-            <p className="text-sm text-white/40 text-center">
+            <span className="text-accent text-5xl">♠</span>
+            <h1 className="text-4xl font-bold text-white">chip in</h1>
+            <p className="text-sm text-text-muted text-center">
               Virtual poker chips for your home games
             </p>
           </div>
@@ -42,7 +73,7 @@ export function Home() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[#0f1117]">
+    <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-bg pb-24">
       <div className="flex flex-col items-center gap-8 w-full max-w-sm">
         {/* Header */}
         <div className="flex flex-col items-center gap-2">
@@ -52,25 +83,24 @@ export function Home() {
           <h1 className="text-3xl font-bold text-white">chip in</h1>
         </div>
 
-        {/* User info */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-surface rounded-2xl w-full border border-white/5">
-          {user.photoURL ? (
-            <img
-              src={user.photoURL}
-              alt={user.displayName ?? ''}
-              className="w-10 h-10 rounded-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-accent font-bold">
-              {user.displayName?.charAt(0).toUpperCase() ?? '?'}
+        {/* Rejoin banner */}
+        {rejoinChecking && (
+          <div className="w-full h-14 bg-surface rounded-2xl animate-pulse mb-3" />
+        )}
+        {!rejoinChecking && rejoinState && (
+          <div className="w-full flex items-center justify-between bg-surface-2 border border-surface-border rounded-2xl px-4 py-3 mb-3">
+            <div>
+              <p className="text-xs text-text-muted uppercase tracking-widest">Active game</p>
+              <p className="text-sm font-mono font-bold text-white">{rejoinState.code}</p>
             </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{user.displayName}</p>
-            <p className="text-xs text-white/40 truncate">{user.email}</p>
+            <button
+              onClick={() => navigate(rejoinState.route)}
+              className="bg-accent text-black text-sm font-bold px-4 py-2 rounded-xl cursor-pointer"
+            >
+              Rejoin
+            </button>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col gap-3 w-full">
@@ -82,18 +112,11 @@ export function Home() {
           </button>
           <button
             onClick={() => navigate('/join')}
-            className="w-full py-4 rounded-2xl bg-surface text-white font-semibold text-base border border-white/10 active:bg-surface-2 transition-colors"
+            className="w-full py-4 rounded-2xl border border-surface-border text-white font-semibold text-base active:bg-surface-2 transition-colors"
           >
             Join Game
           </button>
         </div>
-
-        <button
-          onClick={signOut}
-          className="text-sm text-white/30 active:text-white/60 transition-colors"
-        >
-          Sign out
-        </button>
       </div>
     </div>
   )
