@@ -3,25 +3,40 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { initializeFirestore, persistentLocalCache, doc } from 'firebase/firestore'
 
 // ─────────────────────────────────────────────────────────────
-// TODO: Replace with your Firebase project config.
+// Firebase Configuration from Environment Variables
 //
-// How to get this:
-// 1. Go to https://console.firebase.google.com
-// 2. Create a project (or open an existing one)
-// 3. Project Settings → General → Your apps → Add app (</> Web)
-// 4. Copy the firebaseConfig object and paste it below
-// 5. In the Firebase console, also enable:
+// How to set up:
+// 1. Copy .env.example to .env.local
+// 2. Fill in your Firebase project config values in .env.local
+// 3. Get these values from https://console.firebase.google.com
+//    Project Settings → General → Your apps → Add app (</> Web)
+// 4. Also enable in Firebase console:
 //    - Authentication → Sign-in method → Google
 //    - Firestore Database (start in production mode)
 // ─────────────────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+
+const requiredEnvVars = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
+
+// Validate that all required environment variables are present
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([_, value]) => !value)
+  .map(([key]) => `VITE_FIREBASE_${key.replace(/[A-Z]/g, m => '_' + m).toUpperCase()}`)
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Missing required Firebase environment variables: ${missingVars.join(', ')}\n\n` +
+    'Please copy .env.example to .env.local and fill in your Firebase config values.'
+  )
+}
+
+const firebaseConfig = requiredEnvVars
 
 // Guard against double-initialization in HMR environments
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { onSnapshot, updateDoc, deleteField } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 import { gameRef } from '../lib/firebase'
@@ -39,8 +39,7 @@ export function Lobby() {
   }, [gameCode, navigate])
 
   if (!user) {
-    navigate('/')
-    return null
+    return <Navigate to="/" replace />
   }
 
   if (notFound) {

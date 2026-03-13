@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { onSnapshot, runTransaction, updateDoc } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 import { db, gameRef } from '../lib/firebase'
@@ -38,8 +38,7 @@ export function Game() {
   }, [gameCode, navigate])
 
   if (!user) {
-    navigate('/')
-    return null
+    return <Navigate to="/" replace />
   }
 
   if (notFound) {
@@ -81,17 +80,10 @@ export function Game() {
       if (!player) throw new Error('You are not in this game')
       if (player.balance < amount) throw new Error('Not enough chips')
 
-      const updatedPlayers = {
-        ...g.players,
-        [user.uid]: {
-          ...player,
-          balance: player.balance - amount,
-          currentBet: player.currentBet + amount,
-        },
-      }
       t.update(gameRef(gameCode), {
         pot: g.pot + amount,
-        players: updatedPlayers,
+        [`players.${user.uid}.balance`]: player.balance - amount,
+        [`players.${user.uid}.currentBet`]: player.currentBet + amount,
       })
     })
   }

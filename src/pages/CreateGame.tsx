@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { setDoc, serverTimestamp } from 'firebase/firestore'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { runTransaction, serverTimestamp, doc } from 'firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
-import { db, gameRef } from '../lib/firebase'
-import { generateUniqueCode } from '../utils/gameCode'
+import { db } from '../lib/firebase'
 import type { GameDoc } from '../types'
 
 export function CreateGame() {
@@ -17,8 +16,7 @@ export function CreateGame() {
   const [error, setError] = useState<string | null>(null)
 
   if (!user) {
-    navigate('/')
-    return null
+    return <Navigate to="/" replace />
   }
 
   function updatePreset(index: 0 | 1 | 2, value: number) {
@@ -51,36 +49,59 @@ export function CreateGame() {
     setError(null)
 
     try {
-      const code = await generateUniqueCode(db)
+      // Use transaction to ensure code uniqueness
+      const code = await runTransaction(db, async (t) => {
+        // Try up to 10 times to find a unique code
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const generatedCode = generateCode()
+          const gameDocRef = doc(db, 'games', generatedCode)
+          const snap = await t.get(gameDocRef)
 
-      const gameData: Omit<GameDoc, 'createdAt'> & { createdAt: ReturnType<typeof serverTimestamp> } = {
-        hostId: user.uid,
-        hostName: user.displayName ?? 'Host',
-        status: 'lobby',
-        startingBalance,
-        minBet,
-        presets,
-        pot: 0,
-        round: 1,
-        createdAt: serverTimestamp(),
-        players: {
-          [user.uid]: {
-            displayName: user.displayName ?? 'Host',
-            photoURL: user.photoURL ?? '',
-            balance: startingBalance,
-            currentBet: 0,
-            status: 'approved',
-          },
-        },
-      }
+          if (!snap.exists()) {
+            const gameData: Omit<GameDoc, 'createdAt'> & { createdAt: ReturnType<typeof serverTimestamp> } = {
+              hostId: user.uid,
+              hostName: user.displayName ?? 'Host',
+              status: 'lobby',
+              startingBalance,
+              minBet,
+              presets,
+              pot: 0,
+              round: 1,
+              createdAt: serverTimestamp(),
+              players: {
+                [user.uid]: {
+                  displayName: user.displayName ?? 'Host',
+                  photoURL: user.photoURL ?? '',
+                  balance: startingBalance,
+                  currentBet: 0,
+                  status: 'approved',
+                },
+              },
+            }
+            t.set(gameDocRef, gameData)
+            return generatedCode
+          }
+        }
+        throw new Error('Failed to generate a unique game code after 10 attempts. Please try again.')
+      })
 
-      await setDoc(gameRef(code), gameData)
       navigate(`/lobby/${code}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create game.')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Helper function to generate a single code
+  function generateCode(): string {
+    const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const CODE_LENGTH = 5
+    let code = ''
+    for (let i = 0; i < CODE_LENGTH; i++) {
+      code += CHARSET[Math.floor(Math.random() * CHARSET.length)]
+    }
+    return code
   }
 
   return (
