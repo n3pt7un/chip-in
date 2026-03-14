@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0A0A0A;
+  --color-accent: #28C76F;
+  --color-accent-dark: #1E9A52;
+  --color-surface: #141414;
+  --color-surface-2: #0F1F16;
+  --color-bg: #0A0A0A;
+  --color-text-muted: #2A7A50;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  color: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent overscroll bounce on iOS */
+html {
+  overscroll-behavior: none;
+}
+
+/* Custom range input styling */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  background: #0F1F16;
+  border-radius: 9999px;
+  height: 6px;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -7px;
+  background-color: #28C76F;
+  border-radius: 50%;
+  height: 20px;
+  width: 20px;
+}
+
+input[type='range']::-moz-range-track {
+  background: #0F1F16;
+  border-radius: 9999px;
+  height: 6px;
+}
+
+input[type='range']::-moz-range-thumb {
+  background-color: #28C76F;
+  border: none;
+  border-radius: 50%;
+  height: 20px;
+  width: 20px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+  background: #0F1F16;
+  border-radius: 2px;
+}
